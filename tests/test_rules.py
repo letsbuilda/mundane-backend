@@ -6,13 +6,15 @@ import dataclasses
 import json
 from copy import deepcopy
 from functools import reduce
+from typing import cast
 
 import pytest
 
 from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
+from mundane.engine.demo import demo
 from mundane.engine.rules import apply_action
-from mundane.engine.serialize import dumps, state_to_dict
-from mundane.engine.state import GameState, Player
+from mundane.engine.serialize import _jsonify, dumps, state_to_dict
+from mundane.engine.state import CardType, GameState, Player
 
 
 def party_scenario() -> GameState:
@@ -154,3 +156,73 @@ def test_winner_is_set_when_composure_hits_zero() -> None:
     final = reduce(apply_action, log, state)
     assert final.players[1].composure == -1
     assert final.winner == 0
+
+
+def test_apply_action_rejects_an_unknown_action() -> None:
+    """A value that is not one of the known actions is rejected (the engine's defensive guard)."""
+    state = party_scenario()
+    with pytest.raises(IllegalAction, match="unknown action"):
+        apply_action(state, cast("Action", object()))
+
+
+def _pass_n(state: GameState, n: int) -> None:
+    """Apply ``n`` PassPriority actions, each from whoever currently holds priority."""
+    for _ in range(n):
+        apply_action(state, PassPriority(player=state.priority_player))
+
+
+def test_passing_through_all_phases_ends_the_turn_and_draws() -> None:
+    """Passing with an empty stack advances phases; after Wind Down the turn ends, Time refreshes, a card is drawn."""
+    state = GameState(players=[Player(name="A", time=5), Player(name="B", deck=["espresso_machine"])], phase="PLAN")
+    _pass_n(state, 6)  # PLAN -> DO_STUFF -> WIND_DOWN -> end of turn
+    assert state.active_player == 1
+    assert state.phase == "RESET"
+    assert state.turn == 2
+    assert state.players[1].time == 5
+    assert state.players[1].hand == ["espresso_machine"]
+    assert state.players[1].deck == []
+
+
+def test_turn_end_with_empty_deck_skips_the_draw() -> None:
+    """Ending a turn refreshes Time but draws nothing when the deck is empty (and does not crash)."""
+    state = GameState(players=[Player(name="A", time=5), Player(name="B")], phase="PLAN")
+    _pass_n(state, 6)
+    assert state.active_player == 1
+    assert state.phase == "RESET"
+    assert state.players[1].time == 5
+    assert state.players[1].hand == []
+
+
+def test_noise_complaint_can_counter_a_specific_target_by_id() -> None:
+    """Noise Complaint with an explicit target_id counters that stack item by its id."""
+    state = party_scenario()
+    apply_action(state, PlayCard(player=0, hand_index=0))  # party -> stack as id 1
+    apply_action(state, PassPriority(player=0))
+    apply_action(state, CastInstant(player=1, hand_index=0, target_id=1))  # target the party explicitly
+    apply_action(state, PassPriority(player=0))
+    apply_action(state, PassPriority(player=1))  # both pass -> complaint resolves and counters party 1
+    assert state.players[0].discard == ["throw_a_house_party"]
+    assert state.players[1].discard == ["noise_complaint"]
+
+
+def test_noise_complaint_with_nothing_to_counter_is_a_noop() -> None:
+    """Cast with an empty stack beneath it, Noise Complaint counters nothing and just goes to discard."""
+    state = GameState(players=[Player(name="A", time=5, hand=["noise_complaint"]), Player(name="B")], phase="PLAN")
+    apply_action(state, CastInstant(player=0, hand_index=0))  # only the complaint is ever on the stack
+    apply_action(state, PassPriority(player=0))
+    apply_action(state, PassPriority(player=1))  # complaint resolves with no spell beneath it
+    assert state.players[0].discard == ["noise_complaint"]
+    assert state.stack == []
+
+
+def test_jsonify_converts_enums_to_their_values() -> None:
+    """The serialiser converts any leftover Enum (including nested) to its plain value."""
+    assert _jsonify({"types": [CardType.TASK, CardType.INSTANT]}) == {"types": ["task", "instant"]}
+
+
+def test_demo_runs_and_reports_the_countered_party(capsys: pytest.CaptureFixture[str]) -> None:
+    """The demo plays end to end and reports the rejected move and Alex surviving at 20."""
+    demo()
+    out = capsys.readouterr().out
+    assert "rejected, state untouched" in out
+    assert "Alex's Composure: 20" in out

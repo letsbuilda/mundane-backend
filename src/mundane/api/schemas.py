@@ -50,6 +50,7 @@ def parse_action(body: dict[str, object]) -> Action:
             )
         case "pass_priority":
             return PassPriority(player=_require_int(body, "player"))
-        case _:
-            msg = f"unknown action type: {tag!r}"
-            raise IllegalAction(msg)
+    # No case matched: the body's "type" is missing or not a known action tag. Raising here (rather
+    # than from a `case _`) keeps the terminal path explicit — the function never falls through.
+    msg = f"unknown action type: {tag!r}"
+    raise IllegalAction(msg)

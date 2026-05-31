@@ -47,5 +47,5 @@ def demo() -> None:
     print(f"Phase now:        {final.phase}, stack size: {len(final.stack)}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     demo()
