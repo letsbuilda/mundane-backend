@@ -17,6 +17,13 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
     UV_PYTHON_DOWNLOADS=never
 
+# Git is needed at build time to clone the Litestar repo; the slim uv image
+# ships without it. Drop the apt lists afterward so nothing leaks into the
+# layer cache (this stage isn't shipped, but keeping it tidy is cheap).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Install dependencies first, against only the lockfile + project metadata, so
