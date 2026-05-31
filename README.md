@@ -22,10 +22,11 @@ src/mundane/
     cards.py       # CARD_LIBRARY (id -> Card) + effect functions
     serialize.py   # state/action -> JSON-ready data
     game.py        # Game: state + action log + submit() / export()
-    demo.py        # runnable scenario (python -m mundane.engine.demo)
   api/
     app.py         # Litestar app, in-memory store, exception handler
     schemas.py     # action JSON (tagged union) -> action dataclasses
+examples/
+  demo.py          # runnable scenario (python examples/demo.py)
 ```
 
 ## Requirements
@@ -45,7 +46,7 @@ uv sync --group tests --group dev   # create the venv and install everything
 Watch Steve's house party get shut down by Alex's noise complaint:
 
 ```bash
-uv run python -m mundane.engine.demo
+uv run python examples/demo.py
 ```
 
 ## Run the API

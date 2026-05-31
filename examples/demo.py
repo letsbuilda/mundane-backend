@@ -1,6 +1,6 @@
 """Runnable demo: Steve's house party gets shut down by Alex's noise complaint.
 
-Run with ``python -m mundane.engine.demo``. This is the scenario the engine was designed around;
+Run with ``python examples/demo.py``. This is the scenario the engine was designed around;
 it doubles as a smoke check that ``apply_action`` still behaves as intended.
 """
 
@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from functools import reduce
 
-from .actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
-from .cards import CARD_LIBRARY
-from .rules import apply_action
-from .state import GameState, Player
+from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
+from mundane.engine.cards import CARD_LIBRARY
+from mundane.engine.rules import apply_action
+from mundane.engine.state import GameState, Player
 
 
 def demo() -> None:
