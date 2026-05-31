@@ -68,7 +68,7 @@ jobs:
 
       - name: Sync dependencies
         run: uv sync --group tests
-      
+
       - name: Run tests with coverage
         run: uv run coverage run -m pytest -v --junitxml=junit.xml --alluredir allure-results
 
