@@ -1,20 +1,26 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+  - repo: meta
     hooks:
-      - id: check-case-conflict
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
+  - repo: builtin
+    hooks:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
-      - id: check-json
       - id: trailing-whitespace
         args: [ --markdown-linebreak-ext=md ]
       - id: mixed-line-ending
         args: [ --fix=lf ]
       - id: end-of-file-fixer
-        exclude: .devcontainer/devcontainer-lock.json
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 6a280ba12b7901e47757c868c8c13c6a624c9ecb  # frozen: 0.11.7
+    rev: 254dd0011fda0cd4bbb281ff135792b157e43e1f  # frozen: 0.11.17
     hooks:
       - id: uv-lock
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: 9257c6050c0261b8c57e712f632dc4a8010109a9  # frozen: v1.25.2
+    hooks:
+      - id: zizmor

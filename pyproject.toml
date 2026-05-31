@@ -7,11 +7,10 @@ authors = [
 ]
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "pydantic>=2.13.3",
-    "email-validator>=2.3.0",
-    "httpx>=0.27.2",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
 ]
 
 [project.urls]
@@ -26,10 +25,11 @@ build-backend = "uv_build"
 dev = [
     # DX
     "nox>=2026.4.10",
-    "pre-commit>=4.6.0",
+    "prek>=0.4.0",
     # Linters
-    "ruff>=0.15.11",
-    "mypy>=1.20.2",
+    "ruff>=0.15.13",
+    "mypy>=2.0.0",
+    "ty>=0.0.37",
 ]
 docs = [
     "sphinx>=7.4.4",
@@ -38,13 +38,15 @@ docs = [
     "releases>=2.1.1",
 ]
 tests = [
-    "pytest>=9.0.3",
-    "pytest-randomly>=4.1.0",
-    "coverage>=7.13.5",
+     "coverage>=7.14.0",
+    "pytest>=9.0.2",
+    # Extensions
+    "pytest-randomly>=4.0.1",
+    # Reporting
+    "allure-pytest>=2.15.3",
 ]
 
 [tool.ruff]
-target-version = "py313"
 line-length = 120
 
 [tool.ruff.lint]
@@ -70,9 +72,13 @@ known-first-party = ["mundane"]
 convention = "numpy"
 
 [tool.mypy]
+pretty = true
+num_workers = 4
+native_parser = true # required by num_workers
 plugins = ["pydantic.mypy"]
 
 [tool.coverage.run]
+branch = true
 source_pkgs = ["mundane"]
 source_dirs = ["tests"]
 
