@@ -1,0 +1,21 @@
+# VCS
+.git
+.github
+
+# Python caches / build artifacts
+__pycache__
+*.egg-info
+dist
+.venv
+
+# Tooling caches
+.nox
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# Docs build
+docs/build
+
+# The Dockerfile context doesn't need these
+.pre-commit-config.yaml
