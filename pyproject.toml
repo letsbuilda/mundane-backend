@@ -90,6 +90,9 @@ num_workers = 4
 native_parser = true # required by num_workers
 plugins = ["pydantic.mypy"]
 
+[tool.ty.environment]
+extra-paths = ["examples"]  # so the demo smoke test can `from demo import demo`
+
 [tool.coverage.run]
 branch = true
 source_pkgs = ["mundane"]
