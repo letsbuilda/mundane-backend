@@ -58,10 +58,10 @@ def apply_action(state: GameState, action: Action) -> GameState:
             if state.passes_in_a_row >= len(state.players):
                 state.passes_in_a_row = 0
                 if state.stack:
-                    _resolve_top(state)                 # the stack empties one item at a time
+                    _resolve_top(state)  # the stack empties one item at a time
                     state.priority_player = state.active_player
                 else:
-                    _advance_phase(state)               # nothing pending -> move on
+                    _advance_phase(state)  # nothing pending -> move on
             else:
                 state.priority_player = state.next_player(player)
 
@@ -90,7 +90,7 @@ def _grant_priority_after_stack_change(state: GameState) -> None:
 
 def _resolve_top(state: GameState) -> None:
     """Resolve the top stack item (LIFO): permanents hit the board, others fire then go to discard."""
-    item = state.stack.pop()                            # LIFO: last on, first off
+    item = state.stack.pop()  # LIFO: last on, first off
     card = CARD_LIBRARY[item.card_id]
     if card.type in PERMANENTS:
         state.players[item.controller].board.append(item.card_id)

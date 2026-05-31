@@ -79,9 +79,9 @@ def test_unknown_game_returns_404(client: TestClient[Litestar]) -> None:
 @pytest.mark.parametrize(
     "body",
     [
-        {"type": "teleport", "player": 0},                    # unknown discriminator
-        {"player": 0, "hand_index": 0},                       # missing discriminator
-        {"type": "play_card", "player": 0},                   # missing required field
+        {"type": "teleport", "player": 0},  # unknown discriminator
+        {"player": 0, "hand_index": 0},  # missing discriminator
+        {"type": "play_card", "player": 0},  # missing required field
         {"type": "play_card", "player": "zero", "hand_index": 0},  # wrong field type
     ],
 )

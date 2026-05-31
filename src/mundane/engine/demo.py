@@ -29,13 +29,13 @@ def demo() -> None:
     # A legal game is just a fold over a stream of actions, interleaved between players:
     # who acts next is whatever the state says holds priority.
     action_log: list[Action] = [
-        PlayCard(player=0, hand_index=0),     # Steve casts Throw a House Party -> stack
-        PassPriority(player=0),               # Steve passes; priority -> Alex
+        PlayCard(player=0, hand_index=0),  # Steve casts Throw a House Party -> stack
+        PassPriority(player=0),  # Steve passes; priority -> Alex
         CastInstant(player=1, hand_index=0),  # Alex responds; Noise Complaint -> top of stack
-        PassPriority(player=0),               # priority went back to active Steve; he passes
-        PassPriority(player=1),               # both passed -> resolve top: complaint counters party
-        PassPriority(player=0),               # stack empty now; passes again...
-        PassPriority(player=1),               # ...both pass -> phase advances
+        PassPriority(player=0),  # priority went back to active Steve; he passes
+        PassPriority(player=1),  # both passed -> resolve top: complaint counters party
+        PassPriority(player=0),  # stack empty now; passes again...
+        PassPriority(player=1),  # ...both pass -> phase advances
     ]
     final = reduce(apply_action, action_log, state)
 

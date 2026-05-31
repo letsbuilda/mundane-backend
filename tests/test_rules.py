@@ -23,13 +23,13 @@ def party_scenario() -> GameState:
 
 
 COUNTERED_PARTY_LOG: list[Action] = [
-    PlayCard(player=0, hand_index=0),     # Steve casts Throw a House Party -> stack
-    PassPriority(player=0),               # Steve passes; priority -> Alex
+    PlayCard(player=0, hand_index=0),  # Steve casts Throw a House Party -> stack
+    PassPriority(player=0),  # Steve passes; priority -> Alex
     CastInstant(player=1, hand_index=0),  # Alex responds with Noise Complaint -> top of stack
-    PassPriority(player=0),               # priority back to active Steve; he passes
-    PassPriority(player=1),               # both passed -> resolve top: complaint counters party
-    PassPriority(player=0),               # stack empty now; pass again...
-    PassPriority(player=1),               # ...both pass -> phase advances
+    PassPriority(player=0),  # priority back to active Steve; he passes
+    PassPriority(player=1),  # both passed -> resolve top: complaint counters party
+    PassPriority(player=0),  # stack empty now; pass again...
+    PassPriority(player=1),  # ...both pass -> phase advances
 ]
 
 
