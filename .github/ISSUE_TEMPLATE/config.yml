@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Game rules & card catalog (spec)
+    url: https://github.com/letsbuilda/mundane
+    about: The rules (SPEC.md) and cards (CARDS.md) live in the mundane meta repo, not here.
+  - name: Documentation
+    url: https://docs.letsbuilda.dev/mundane/
+    about: Read the project documentation.

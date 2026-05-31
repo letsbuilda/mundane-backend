@@ -1,0 +1,53 @@
+name: Bug report
+description: Report something that isn't working as expected
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please search existing issues first.
+        Note: game **rules and cards** are defined in the
+        [mundane meta repo](https://github.com/letsbuilda/mundane), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, commands, or an action sequence / request body that triggers it.
+      placeholder: |
+        1. Start the API: `uv run uvicorn mundane.api.app:app`
+        2. POST /games/{id}/actions with `{"type": "...", ...}`
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `uv run python -V` and `uv --version`, plus your OS.
+      placeholder: |
+        - Python: 3.14.x
+        - uv: 0.11.x
+        - OS: ...
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / traceback
+      description: Paste any relevant output. This is automatically formatted as code, so no backticks needed.
+      render: shell
+    validations:
+      required: false
