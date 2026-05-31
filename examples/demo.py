@@ -4,8 +4,6 @@ Run with ``python examples/demo.py``. This is the scenario the engine was design
 it doubles as a smoke check that ``apply_action`` still behaves as intended.
 """
 
-from __future__ import annotations
-
 from functools import reduce
 
 from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard

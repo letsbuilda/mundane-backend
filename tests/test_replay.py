@@ -1,7 +1,5 @@
 """Replay tests: a game's state is a pure fold of its action log (the event-sourcing property)."""
 
-from __future__ import annotations
-
 from functools import reduce
 
 import pytest

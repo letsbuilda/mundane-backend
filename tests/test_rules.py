@@ -1,7 +1,5 @@
 """Engine rules tests: the legality preconditions mirrored one-for-one, plus the countered party."""
 
-from __future__ import annotations
-
 import dataclasses
 import json
 from copy import deepcopy

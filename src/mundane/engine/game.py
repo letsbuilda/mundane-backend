@@ -6,8 +6,6 @@ the log **only when the action is accepted**; a rejected move (``IllegalAction``
 is never logged.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 

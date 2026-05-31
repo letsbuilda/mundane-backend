@@ -6,8 +6,6 @@ file back. Round-trip *loading* is out of scope; if it is added later, decode wi
 hand-written decoder.
 """
 
-from __future__ import annotations
-
 import dataclasses
 import json
 from enum import Enum

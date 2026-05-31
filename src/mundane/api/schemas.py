@@ -10,8 +10,6 @@ is rejected with :class:`IllegalAction`, which the app maps to HTTP 422. No lega
 is pure translation.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from mundane.engine.actions import CastInstant, IllegalAction, PassPriority, PlayCard
