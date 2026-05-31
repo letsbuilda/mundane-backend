@@ -14,7 +14,6 @@ dependencies = [
     # Litestar 3 is still in development; track main, pinned to a commit SHA in uv.lock.
     # See the 3.x changelog: https://docs.litestar.dev/3-dev/release-notes/changelog.html
     "litestar @ git+https://github.com/litestar-org/litestar.git@main",
-    # Pure-Python ASGI server so `uvicorn mundane.api.app:app` runs out of the box.
     "uvicorn>=0.30",
 ]
 
@@ -23,7 +22,7 @@ repository = "https://github.com/letsbuilda/mundane/"
 documentation = "https://docs.letsbuilda.dev/mundane/"
 
 [build-system]
-requires = ["uv_build>=0.11.7"]
+requires = ["uv_build>=0.11.15,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
@@ -51,6 +50,14 @@ tests = [
     "allure-pytest>=2.15.3",
     # Litestar's TestClient is built on httpx
     "httpx>=0.28.1",
+]
+
+[tool.uv]
+# Sync with Dependabot's uv version
+required-version = ">=0.11.8"
+exclude-newer = "P7D"
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 
 [tool.ruff]
