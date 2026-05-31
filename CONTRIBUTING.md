@@ -33,7 +33,7 @@ uv run python examples/demo.py                 # run the demo scenario
 uv run uvicorn mundane.api.app:app --reload    # serve the API; OpenAPI docs at /schema
 ```
 
-The README has the endpoint table and `curl` examples for exercising the API.
+The [API docs](docs/api.rst) have the endpoint table and `curl` examples for exercising the API.
 
 ## Development workflow
 
