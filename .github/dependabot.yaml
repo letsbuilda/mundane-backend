@@ -22,6 +22,17 @@ updates:
     cooldown:
       default-days: 7
 
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
+
   - package-ecosystem: pre-commit
     directory: /
     schedule:
