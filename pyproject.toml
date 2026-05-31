@@ -11,6 +11,11 @@ requires-python = ">=3.14"
 dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
+    # Litestar 3 is still in development; track main, pinned to a commit SHA in uv.lock.
+    # See the 3.x changelog: https://docs.litestar.dev/3-dev/release-notes/changelog.html
+    "litestar @ git+https://github.com/litestar-org/litestar.git@main",
+    # Pure-Python ASGI server so `uvicorn mundane.api.app:app` runs out of the box.
+    "uvicorn>=0.30",
 ]
 
 [project.urls]
@@ -44,6 +49,8 @@ tests = [
     "pytest-randomly>=4.0.1",
     # Reporting
     "allure-pytest>=2.15.3",
+    # Litestar's TestClient is built on httpx
+    "httpx>=0.28.1",
 ]
 
 [tool.ruff]
@@ -61,8 +68,12 @@ ignore = [
 "docs/*" = [
     "INP001", # (File `docs/conf.py` is part of an implicit namespace package. Add an `__init__.py`.) - Docs are not modules
 ]
+"src/mundane/engine/demo.py" = [
+    "T201",   # (`print` found) - The demo is a CLI; printing the scenario outcome is the point
+]
 "tests/*" = [
-    "S101",   # (Use of `assert` detected) - Yes, that's the point
+    "S101",     # (Use of `assert` detected) - Yes, that's the point
+    "PLR2004",  # (Magic value used in comparison) - Asserting against literal expected values is the point
 ]
 
 [tool.ruff.lint.isort]
