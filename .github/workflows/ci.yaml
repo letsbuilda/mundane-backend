@@ -42,7 +42,7 @@ jobs:
         run: uv run ruff check --output-format=github .
 
       - name: Run mypy
-        run: uv run mypy --strict packages/
+        run: uv run mypy --strict src/
 
       - name: Run ty
         run: uv run ty check .
