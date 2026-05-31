@@ -4,8 +4,6 @@ This is the ONLY place effect functions (code) live. State references cards by i
 through :data:`CARD_LIBRARY` is how the engine recovers a card's type, cost, and effect.
 """
 
-from __future__ import annotations
-
 from .state import Card, CardType, GameState, StackItem
 
 

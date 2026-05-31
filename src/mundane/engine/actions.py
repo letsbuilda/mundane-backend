@@ -6,8 +6,6 @@ classes; both the JSON export (``serialize.py``) and the HTTP parser (``api/sche
 from it so the wire format can never drift from the engine.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 
@@ -39,7 +37,7 @@ type Action = PlayCard | CastInstant | PassPriority
 """The closed set of moves a player may submit."""
 
 
-ACTION_TYPES: dict[str, type[PlayCard | CastInstant | PassPriority]] = {
+ACTION_TYPES: dict[str, type[Action]] = {
     "play_card": PlayCard,
     "cast_instant": CastInstant,
     "pass_priority": PassPriority,

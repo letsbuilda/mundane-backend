@@ -1,7 +1,5 @@
 """API tests: drive the Litestar app over HTTP and confirm it is a thin shell over the engine."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import pytest

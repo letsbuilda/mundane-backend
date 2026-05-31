@@ -6,8 +6,6 @@ The function returns the state so it composes as a reducer:
 ``final = reduce(apply_action, actions, initial)``.
 """
 
-from __future__ import annotations
-
 from .actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
 from .cards import CARD_LIBRARY
 from .state import PERMANENTS, PHASES, CardType, GameState, StackItem

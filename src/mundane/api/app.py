@@ -9,8 +9,6 @@ on restart); see the README. Keeping it behind the small :class:`GameStore` inte
 (create / get / save) makes swapping it for Redis or SQLite a localised change.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import uuid4
 

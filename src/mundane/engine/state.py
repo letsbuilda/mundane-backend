@@ -7,14 +7,12 @@ live only in the library, never in serialisable state. That separation is what l
 :class:`GameState` round-trip through JSON.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class CardType(Enum):
+class CardType(StrEnum):
     """The five kinds of card. The first three are permanents (they stay on the board)."""
 
     PERSON = "person"  # creature-like; stays on the board once it resolves
