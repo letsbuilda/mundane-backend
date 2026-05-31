@@ -13,8 +13,13 @@ import json
 from enum import Enum
 from typing import TYPE_CHECKING, cast
 
+from .actions import ACTION_TYPES
+
 if TYPE_CHECKING:
+    from .actions import Action
     from .state import GameState
+
+_TAG_BY_TYPE = {action_class: tag for tag, action_class in ACTION_TYPES.items()}
 
 
 def _jsonify(value: object) -> object:
@@ -31,6 +36,11 @@ def _jsonify(value: object) -> object:
 def state_to_dict(state: GameState) -> dict[str, object]:
     """Return a plain, JSON-ready dict for ``state``. After M1 it holds only ids and scalars."""
     return cast("dict[str, object]", _jsonify(dataclasses.asdict(state)))
+
+
+def action_to_dict(action: Action) -> dict[str, object]:
+    """Return a JSON-ready dict for ``action``: its discriminator tag plus its fields."""
+    return {"type": _TAG_BY_TYPE[type(action)], **dataclasses.asdict(action)}
 
 
 def dumps(obj: object) -> str:
