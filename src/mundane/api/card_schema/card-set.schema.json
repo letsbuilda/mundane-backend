@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docs.letsbuilda.dev/mundane/schemas/card-set.schema.json",
+  "title": "Mundane card set",
+  "description": "A set of Mundane cards. Cards carry bare ids; the loader composes the namespaced runtime id as `set_id:id`. The `effect` field names an effect from the engine's fixed vocabulary (validated by the engine at load time, not by this schema); `params` is a generic object the engine interprets per effect.",
+  "type": "object",
+  "required": ["set_id", "name", "version", "cards"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional editor/tooling hint; the file is validated against this card-set schema, not the value here."
+    },
+    "set_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Namespace for every card in this set; composed with each card id as `set_id:id`."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable set name."
+    },
+    "version": {
+      "type": "string",
+      "description": "Set version: semver (e.g. 1.0.0) or an ISO-8601 date (e.g. 2026-05-31).",
+      "anyOf": [
+        { "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        { "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      ]
+    },
+    "cards": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/card" },
+      "description": "The cards in this set (non-empty)."
+    }
+  },
+  "$defs": {
+    "card": {
+      "type": "object",
+      "required": ["id", "name", "cost", "type", "effect", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Bare card id, unique within the set; the loader composes `set_id:id`."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name."
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time required to play the card."
+        },
+        "type": {
+          "description": "One of the engine's five card types.",
+          "enum": ["person", "appliance", "habit", "task", "instant"]
+        },
+        "effect": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Name of an effect in the engine's fixed vocabulary. Permanents use `none`. The engine rejects unknown names at load time; this schema does not check the vocabulary."
+        },
+        "params": {
+          "type": "object",
+          "default": {},
+          "description": "Generic parameters for the named effect; the engine validates these per effect."
+        },
+        "text": {
+          "type": "string",
+          "description": "Rules text shown to players."
+        },
+        "flavor": {
+          "type": "string",
+          "description": "Optional flavor text."
+        }
+      }
+    }
+  }
+}

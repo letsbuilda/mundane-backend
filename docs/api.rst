@@ -20,7 +20,7 @@ Endpoints
      - Purpose
    * - POST
      - ``/games``
-     - create a game
+     - create a game (optional ``{"set_urls": [...]}`` body; default the core set)
    * - GET
      - ``/games/{id}``
      - read current state
@@ -29,7 +29,7 @@ Endpoints
      - submit a move (422 if illegal)
    * - GET
      - ``/games/{id}/export``
-     - download the game log + final state
+     - download the game log + final state + card snapshot
 
 Exercise it
 -----------
@@ -68,3 +68,26 @@ The action body is a tagged union — every action carries a ``type``:
      - ``player``, ``hand_index``, optional ``target_id``
    * - ``pass_priority``
      - ``player``
+
+Card sets
+---------
+
+Cards are loaded at game creation from JSON *sets* published in
+`mundane-cards <https://github.com/letsbuilda/mundane-cards>`_. ``POST /games`` accepts an optional
+``{"set_urls": [...]}`` body and defaults to the core set. Each URL is **allowlisted** (only the
+``mundane-cards`` raw origin, matched by parsed host + path), **fetched** with hardening (https-only,
+hard timeout, size cap, content-type check), **validated** against a vendored copy of the card-set
+JSON Schema, and **built** into cards by the engine — which rejects unknown effect names, bad params,
+and duplicate composed ids. The resolved pool is **snapshotted** with a ``sha256`` content hash into
+the game and returned by the export, so a saved game replays self-contained.
+
+Bad input is rejected before anything is stored: a non-allowlisted URL, a schema-invalid set, an
+unknown effect, bad params, or a duplicate id give ``422``; a fetch failure, timeout, or oversize
+give ``502``.
+
+.. code-block:: bash
+
+   # create a game from an explicit (allowlisted) set URL
+   curl -s -X POST localhost:8000/games \
+     -H 'content-type: application/json' \
+     -d '{"set_urls": ["https://raw.githubusercontent.com/letsbuilda/mundane-cards/main/sets/core.json"]}'

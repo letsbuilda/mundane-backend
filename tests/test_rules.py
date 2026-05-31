@@ -3,22 +3,27 @@
 import dataclasses
 import json
 from copy import deepcopy
-from functools import reduce
+from functools import partial, reduce
+from pathlib import Path
 from typing import cast
 
 import pytest
 from demo import demo
 
 from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
+from mundane.engine.cards import build_pool
 from mundane.engine.rules import apply_action
 from mundane.engine.serialize import _jsonify, dumps, state_to_dict
 from mundane.engine.state import CardType, GameState, Player
 
+POOL = build_pool(json.loads((Path(__file__).parent / "fixtures" / "core.json").read_text(encoding="utf-8")))
+step = partial(apply_action, cards=POOL)
+
 
 def party_scenario() -> GameState:
     """Build the opening position: Steve holds the party, Alex holds the complaint, 5 Time each."""
-    steve = Player(name="Steve", time=5, hand=["throw_a_house_party"])
-    alex = Player(name="Alex", time=5, hand=["noise_complaint"])
+    steve = Player(name="Steve", time=5, hand=["core:throw_a_house_party"])
+    alex = Player(name="Alex", time=5, hand=["core:noise_complaint"])
     return GameState(players=[steve, alex], active_player=0, priority_player=0, phase="PLAN")
 
 
@@ -37,16 +42,16 @@ def _assert_rejected(state: GameState, action: Action, needle: str) -> None:
     """Assert ``action`` is rejected with a message matching ``needle`` and state is unchanged."""
     before = deepcopy(state)
     with pytest.raises(IllegalAction, match=needle):
-        apply_action(state, action)
+        apply_action(state, action, POOL)
     assert state == before
 
 
 def test_noise_complaint_counters_the_party() -> None:
     """Alex's Noise Complaint counters Steve's party; Alex stays at 20 and both cards hit discard."""
-    final = reduce(apply_action, COUNTERED_PARTY_LOG, party_scenario())
+    final = reduce(step, COUNTERED_PARTY_LOG, party_scenario())
     assert final.players[1].composure == 20
-    assert final.players[0].discard == ["throw_a_house_party"]
-    assert final.players[1].discard == ["noise_complaint"]
+    assert final.players[0].discard == ["core:throw_a_house_party"]
+    assert final.players[1].discard == ["core:noise_complaint"]
     assert final.phase == "DO_STUFF"
     assert final.stack == []
 
@@ -54,20 +59,20 @@ def test_noise_complaint_counters_the_party() -> None:
 def test_state_is_json_serialisable_by_id() -> None:
     """A mid-game state serialises to JSON containing card ids, never effect-function reprs."""
     state = party_scenario()
-    apply_action(state, PlayCard(player=0, hand_index=0))  # party now on the stack
+    apply_action(state, PlayCard(player=0, hand_index=0), POOL)  # party now on the stack
     blob = json.dumps(dataclasses.asdict(state))
-    assert "throw_a_house_party" in blob
+    assert "core:throw_a_house_party" in blob
     assert "<function" not in blob
 
 
 def test_state_to_dict_round_trips_through_json() -> None:
     """A mid-game state serialises to a JSON string that parses back to the same dict."""
     state = party_scenario()
-    apply_action(state, PlayCard(player=0, hand_index=0))  # party on the stack
+    apply_action(state, PlayCard(player=0, hand_index=0), POOL)  # party on the stack
     blob = dumps(state_to_dict(state))
     parsed = json.loads(blob)
     assert parsed == state_to_dict(state)
-    assert parsed["stack"][0]["card_id"] == "throw_a_house_party"
+    assert parsed["stack"][0]["card_id"] == "core:throw_a_house_party"
     assert parsed["players"][0]["hand"] == []
 
 
@@ -98,15 +103,15 @@ def test_play_card_only_during_plan() -> None:
 def test_play_card_requires_empty_stack() -> None:
     """Sorcery-speed cards require an empty stack."""
     state = party_scenario()
-    state.players[0].hand = ["throw_a_house_party", "espresso_machine"]
-    apply_action(state, PlayCard(player=0, hand_index=0))  # party -> stack, priority stays with Steve
+    state.players[0].hand = ["core:throw_a_house_party", "core:espresso_machine"]
+    apply_action(state, PlayCard(player=0, hand_index=0), POOL)  # party -> stack, priority stays with Steve
     _assert_rejected(state, PlayCard(player=0, hand_index=0), "stack must be empty")
 
 
 def test_play_card_rejects_an_instant() -> None:
     """An instant must be cast with CastInstant, not played at sorcery speed."""
     state = party_scenario()
-    state.players[0].hand = ["noise_complaint"]
+    state.players[0].hand = ["core:noise_complaint"]
     _assert_rejected(state, PlayCard(player=0, hand_index=0), "use CastInstant for instants")
 
 
@@ -120,7 +125,7 @@ def test_play_card_requires_enough_time() -> None:
 def test_cast_instant_requires_priority() -> None:
     """Only the player who holds priority may cast an instant."""
     state = party_scenario()
-    state.players[1].hand = ["noise_complaint"]
+    state.players[1].hand = ["core:noise_complaint"]
     _assert_rejected(state, CastInstant(player=1, hand_index=0), "don't have priority")
 
 
@@ -139,10 +144,10 @@ def test_no_actions_after_game_over() -> None:
 def test_permanent_resolves_onto_the_board() -> None:
     """A PERSON / APPLIANCE / HABIT resolves onto its controller's board, not the discard."""
     state = party_scenario()
-    state.players[0].hand = ["helpful_roommate"]
+    state.players[0].hand = ["core:helpful_roommate"]
     log: list[Action] = [PlayCard(player=0, hand_index=0), PassPriority(player=0), PassPriority(player=1)]
-    final = reduce(apply_action, log, state)
-    assert final.players[0].board == ["helpful_roommate"]
+    final = reduce(step, log, state)
+    assert final.players[0].board == ["core:helpful_roommate"]
     assert final.players[0].discard == []
 
 
@@ -151,7 +156,7 @@ def test_winner_is_set_when_composure_hits_zero() -> None:
     state = party_scenario()
     state.players[1].composure = 2  # the party deals 3
     log: list[Action] = [PlayCard(player=0, hand_index=0), PassPriority(player=0), PassPriority(player=1)]
-    final = reduce(apply_action, log, state)
+    final = reduce(step, log, state)
     assert final.players[1].composure == -1
     assert final.winner == 0
 
@@ -160,24 +165,27 @@ def test_apply_action_rejects_an_unknown_action() -> None:
     """A value that is not one of the known actions is rejected (the engine's defensive guard)."""
     state = party_scenario()
     with pytest.raises(IllegalAction, match="unknown action"):
-        apply_action(state, cast("Action", object()))
+        apply_action(state, cast("Action", object()), POOL)
 
 
 def _pass_n(state: GameState, n: int) -> None:
     """Apply ``n`` PassPriority actions, each from whoever currently holds priority."""
     for _ in range(n):
-        apply_action(state, PassPriority(player=state.priority_player))
+        apply_action(state, PassPriority(player=state.priority_player), POOL)
 
 
 def test_passing_through_all_phases_ends_the_turn_and_draws() -> None:
     """Passing with an empty stack advances phases; after Wind Down the turn ends, Time refreshes, a card is drawn."""
-    state = GameState(players=[Player(name="A", time=5), Player(name="B", deck=["espresso_machine"])], phase="PLAN")
+    state = GameState(
+        players=[Player(name="A", time=5), Player(name="B", deck=["core:espresso_machine"])],
+        phase="PLAN",
+    )
     _pass_n(state, 6)  # PLAN -> DO_STUFF -> WIND_DOWN -> end of turn
     assert state.active_player == 1
     assert state.phase == "RESET"
     assert state.turn == 2
     assert state.players[1].time == 5
-    assert state.players[1].hand == ["espresso_machine"]
+    assert state.players[1].hand == ["core:espresso_machine"]
     assert state.players[1].deck == []
 
 
@@ -194,22 +202,25 @@ def test_turn_end_with_empty_deck_skips_the_draw() -> None:
 def test_noise_complaint_can_counter_a_specific_target_by_id() -> None:
     """Noise Complaint with an explicit target_id counters that stack item by its id."""
     state = party_scenario()
-    apply_action(state, PlayCard(player=0, hand_index=0))  # party -> stack as id 1
-    apply_action(state, PassPriority(player=0))
-    apply_action(state, CastInstant(player=1, hand_index=0, target_id=1))  # target the party explicitly
-    apply_action(state, PassPriority(player=0))
-    apply_action(state, PassPriority(player=1))  # both pass -> complaint resolves and counters party 1
-    assert state.players[0].discard == ["throw_a_house_party"]
-    assert state.players[1].discard == ["noise_complaint"]
+    apply_action(state, PlayCard(player=0, hand_index=0), POOL)  # party -> stack as id 1
+    apply_action(state, PassPriority(player=0), POOL)
+    apply_action(state, CastInstant(player=1, hand_index=0, target_id=1), POOL)  # target the party explicitly
+    apply_action(state, PassPriority(player=0), POOL)
+    apply_action(state, PassPriority(player=1), POOL)  # both pass -> complaint resolves and counters party 1
+    assert state.players[0].discard == ["core:throw_a_house_party"]
+    assert state.players[1].discard == ["core:noise_complaint"]
 
 
 def test_noise_complaint_with_nothing_to_counter_is_a_noop() -> None:
     """Cast with an empty stack beneath it, Noise Complaint counters nothing and just goes to discard."""
-    state = GameState(players=[Player(name="A", time=5, hand=["noise_complaint"]), Player(name="B")], phase="PLAN")
-    apply_action(state, CastInstant(player=0, hand_index=0))  # only the complaint is ever on the stack
-    apply_action(state, PassPriority(player=0))
-    apply_action(state, PassPriority(player=1))  # complaint resolves with no spell beneath it
-    assert state.players[0].discard == ["noise_complaint"]
+    state = GameState(
+        players=[Player(name="A", time=5, hand=["core:noise_complaint"]), Player(name="B")],
+        phase="PLAN",
+    )
+    apply_action(state, CastInstant(player=0, hand_index=0), POOL)  # only the complaint is ever on the stack
+    apply_action(state, PassPriority(player=0), POOL)
+    apply_action(state, PassPriority(player=1), POOL)  # complaint resolves with no spell beneath it
+    assert state.players[0].discard == ["core:noise_complaint"]
     assert state.stack == []
 
 

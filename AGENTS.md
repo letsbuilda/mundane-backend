@@ -14,9 +14,12 @@ the rules live in the engine.
 
 - **Stack:** Python 3.14+, [Litestar](https://litestar.dev) 3 (pre-release, tracked from git
   `main`), Pydantic, Uvicorn. Managed with [`uv`](https://docs.astral.sh/uv/).
-- **Rules & cards spec** live in the meta repo, not here:
-  [SPEC.md](https://github.com/letsbuilda/mundane/blob/main/game-docs/SPEC.md) and
-  [CARDS.md](https://github.com/letsbuilda/mundane/blob/main/game-docs/CARDS.md).
+- **Rules & cards spec** live in the meta repo, not here: the
+  [specification](https://github.com/letsbuilda/mundane/blob/main/specs/) (notably
+  [cards.md](https://github.com/letsbuilda/mundane/blob/main/specs/cards.md) and
+  [card-sets.md](https://github.com/letsbuilda/mundane/blob/main/specs/card-sets.md)) and the
+  [rulebook](https://github.com/letsbuilda/mundane/blob/main/rulebook/). Card **content** is published
+  as JSON sets in [`mundane-cards`](https://github.com/letsbuilda/mundane-cards).
 
 ## Setup
 
@@ -83,13 +86,15 @@ src/mundane/
   engine/        # the game, with NO HTTP knowledge
     state.py       # Card, CardType, Player, StackItem, GameState
     actions.py     # PlayCard, CastInstant, PassPriority, IllegalAction
-    rules.py       # apply_action + helpers — the one door
-    cards.py       # CARD_LIBRARY (id -> Card) + effect functions
-    serialize.py   # state/action -> JSON-ready data
-    game.py        # Game: state + action log + submit() / export()
+    rules.py       # apply_action(state, action, cards) + helpers — the one door
+    cards.py       # EFFECTS vocabulary + build_card/build_pool loader + load errors
+    serialize.py   # state/action -> JSON-ready data; canonical_json for hashing
+    game.py        # Game: state + card pool + action log + snapshot; submit() / export()
   api/
-    app.py         # Litestar app, in-memory GameStore, exception handler
+    app.py         # Litestar app, in-memory GameStore, exception handlers (422 / 502)
     schemas.py     # action JSON (tagged union) -> action dataclasses
+    set_loader.py  # allowlist + hardened fetch + schema-validate + snapshot/hash
+    card_schema/   # vendored, pinned copy of card-set.schema.json
 examples/demo.py   # runnable scenario
 tests/             # pytest suite
 docs/              # Sphinx docs
@@ -111,6 +116,17 @@ Invariants to preserve when changing code:
   identity (there's a test for it).
 - The game store is an in-memory dict behind a small `GameStore` interface (`create`/`get`/`save`);
   games are volatile. Prefer extending this interface over reaching around it.
+- **Cards are external data; effects are engine code.** `cards.py` holds the fixed effect vocabulary
+  (`EFFECTS`) and the loader (`build_card` / `build_pool`); a JSON card names an effect + `params` and
+  cannot add behaviour. The engine rejects unknown effect names and bad params at load time; the
+  schema validates JSON *shape* only. Adding a new effect is an engine change here, not a cards-repo PR.
+- **All fetching / allowlisting / validation / snapshotting lives in `api/set_loader.py`** — the
+  engine stays HTTP-free. Sets load only from the allowlisted `mundane-cards` raw origin; the resolved
+  pool is snapshotted (with a content hash) into the game and included in the export. `GameStore.create`
+  loads **before** it touches the store, so any loader error (422/502) leaves the store untouched.
+- **The resolved pool is threaded through `apply_action(state, action, cards)` and lives on `Game`,
+  never on `GameState`.** State holds composed card **ids** (`set_id:id`), never `Card` objects (whose
+  bound effect closures are code), so a whole `GameState` still round-trips through JSON.
 
 ## Making changes
 

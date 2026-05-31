@@ -1,9 +1,9 @@
 """Game-state dataclasses: the single source of truth for a Mundane game.
 
 Nothing in this module mutates state; :func:`mundane.engine.rules.apply_action` is the only
-thing that does. Cards are referenced **by id** throughout the state (see
-:data:`mundane.engine.cards.CARD_LIBRARY`); card *objects* — and the effect functions they carry —
-live only in the library, never in serialisable state. That separation is what lets a whole
+thing that does. Cards are referenced **by id** throughout the state; card *objects* — built from
+JSON sets by :func:`mundane.engine.cards.build_card` — and the effect closures they carry live only
+in the per-game pool, never in serialisable state. That separation is what lets a whole
 :class:`GameState` round-trip through JSON.
 """
 
@@ -32,7 +32,11 @@ def _no_effect(_state: GameState, _item: StackItem) -> None:
 
 @dataclass
 class Card:
-    """A card *definition*. Lives only in CARD_LIBRARY; state refers to it by ``id``."""
+    """A card *definition*, built from a JSON set by :func:`mundane.engine.cards.build_card`.
+
+    State refers to a card only by its composed ``id`` (``set_id:id``); the bound ``effect`` closure
+    lives in the per-game pool, never in serialisable state.
+    """
 
     id: str
     name: str
@@ -40,6 +44,7 @@ class Card:
     type: CardType
     effect: Effect = _no_effect
     text: str = ""
+    flavor: str = ""
 
 
 PERMANENTS = (CardType.PERSON, CardType.APPLIANCE, CardType.HABIT)
