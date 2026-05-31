@@ -61,8 +61,12 @@ ignore = [
 "docs/*" = [
     "INP001", # (File `docs/conf.py` is part of an implicit namespace package. Add an `__init__.py`.) - Docs are not modules
 ]
+"src/mundane/engine/demo.py" = [
+    "T201",   # (`print` found) - The demo is a CLI; printing the scenario outcome is the point
+]
 "tests/*" = [
-    "S101",   # (Use of `assert` detected) - Yes, that's the point
+    "S101",     # (Use of `assert` detected) - Yes, that's the point
+    "PLR2004",  # (Magic value used in comparison) - Asserting against literal expected values is the point
 ]
 
 [tool.ruff.lint.isort]
