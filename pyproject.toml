@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.urls]
-repository = "https://github.com/letsbuilda/mundane/"
+repository = "https://github.com/letsbuilda/mundane-backend"
 documentation = "https://docs.letsbuilda.dev/mundane/"
 
 [build-system]

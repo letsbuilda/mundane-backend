@@ -8,8 +8,13 @@ current state and then transitions it. Illegal moves are rejected (the state is 
 crashed on. The HTTP API is a thin shell that translates requests into engine actions; all the rules
 live in the engine.
 
-- The rules, in human-readable form: [`game-docs/SPEC.md`](./game-docs/SPEC.md)
-- The card catalog: [`game-docs/CARDS.md`](./game-docs/CARDS.md)
+The rules and card catalog live in the [`mundane`](https://github.com/letsbuilda/mundane) meta/spec
+repo:
+
+- The rules, in human-readable form:
+  [`game-docs/SPEC.md`](https://github.com/letsbuilda/mundane/blob/main/game-docs/SPEC.md)
+- The card catalog:
+  [`game-docs/CARDS.md`](https://github.com/letsbuilda/mundane/blob/main/game-docs/CARDS.md)
 
 ## Layout
 
