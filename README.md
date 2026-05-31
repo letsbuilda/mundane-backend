@@ -1,6 +1,6 @@
 # mundane
 
-Magic: The Gathering without the, you know, magic.
+No dragons. No spells. Just Tuesday.
 
 Two households face off. The engine is a **referee**: a whole game is a fold over a stream of
 *actions*, and one function — `apply_action(state, action)` — validates each action against the

@@ -1,1 +1,1 @@
-"""Magic: The Gathering without the, you know, magic."""
+"""No dragons. No spells. Just Tuesday."""
