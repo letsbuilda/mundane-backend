@@ -90,9 +90,19 @@ def submit_action(game_id: str, data: dict[str, object], store: GameStore) -> di
 
 
 @get("/games/{game_id:str}/export", sync_to_thread=False)
-def export_game(game_id: str, store: GameStore) -> dict[str, object]:
-    """Return the game's action log and final state as JSON."""
-    return store.get(game_id).export()
+def export_game(game_id: str, store: GameStore) -> Response[dict[str, object]]:
+    """Return the game's action log and final state as a downloadable JSON attachment.
+
+    The Content-Disposition attachment header is what turns this response into a saved file — it is
+    all the "Download game log" button on the game-over screen needs to point at.
+    """
+    export = store.get(game_id).export()
+    filename = f"mundane-game-{game_id}.json"
+    return Response(
+        content=export,
+        media_type=MediaType.JSON,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def create_app(store: GameStore | None = None) -> Litestar:

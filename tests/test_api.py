@@ -106,6 +106,16 @@ def test_export_returns_log_and_final_state(client: TestClient[Litestar]) -> Non
     assert exported["final_state"]["players"][1]["composure"] == 20
 
 
+def test_export_is_a_downloadable_attachment(client: TestClient[Litestar]) -> None:
+    """The export response is a JSON attachment, named per game, so it saves as a file."""
+    game_id = client.post("/games").json()["game_id"]
+    response = client.get(f"/games/{game_id}/export")
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == f'attachment; filename="mundane-game-{game_id}.json"'
+    assert response.headers["content-type"].startswith("application/json")
+    assert sorted(response.json()) == ["final_state", "log"]
+
+
 def test_action_json_round_trips_through_the_parser() -> None:
     """For every action type, action_to_dict then parse_action is the identity (parser <-> registry)."""
     assert {type(action) for action in ROUND_TRIP_ACTIONS} == set(ACTION_TYPES.values())
