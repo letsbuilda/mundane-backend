@@ -11,6 +11,11 @@ requires-python = ">=3.14"
 dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
+    # Litestar 3 is still in development; track main, pinned to a commit SHA in uv.lock.
+    # See the 3.x changelog: https://docs.litestar.dev/3-dev/release-notes/changelog.html
+    "litestar @ git+https://github.com/litestar-org/litestar.git@main",
+    # Pure-Python ASGI server so `uvicorn mundane.api.app:app` runs out of the box.
+    "uvicorn>=0.30",
 ]
 
 [project.urls]
@@ -44,6 +49,8 @@ tests = [
     "pytest-randomly>=4.0.1",
     # Reporting
     "allure-pytest>=2.15.3",
+    # Litestar's TestClient is built on httpx
+    "httpx>=0.28.1",
 ]
 
 [tool.ruff]
