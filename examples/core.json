@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "set_id": "core",
+  "name": "Core Set",
+  "version": "1.0.0",
+  "cards": [
+    {
+      "id": "throw_a_house_party",
+      "name": "Throw a House Party",
+      "cost": 3,
+      "type": "task",
+      "effect": "damage_composure",
+      "params": { "amount": 3 },
+      "text": "Deal 3 chaos to your opponent's Composure."
+    },
+    {
+      "id": "noise_complaint",
+      "name": "Noise Complaint",
+      "cost": 1,
+      "type": "instant",
+      "effect": "counter_task",
+      "params": {},
+      "text": "Counter target task on the stack."
+    },
+    {
+      "id": "helpful_roommate",
+      "name": "Helpful Roommate",
+      "cost": 2,
+      "type": "person",
+      "effect": "none",
+      "params": {},
+      "text": "A dependable body around the house. Resolves onto your board."
+    },
+    {
+      "id": "espresso_machine",
+      "name": "Espresso Machine",
+      "cost": 2,
+      "type": "appliance",
+      "effect": "none",
+      "params": {},
+      "text": "A trusty appliance. Resolves onto your board."
+    },
+    {
+      "id": "morning_jog",
+      "name": "Morning Jog",
+      "cost": 1,
+      "type": "habit",
+      "effect": "none",
+      "params": {},
+      "text": "A wholesome routine. Resolves onto your board."
+    }
+  ]
+}

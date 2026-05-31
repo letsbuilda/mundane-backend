@@ -44,3 +44,8 @@ def action_to_dict(action: Action) -> dict[str, object]:
 def dumps(obj: object) -> str:
     """Serialise ``obj`` to a pretty-printed JSON string."""
     return json.dumps(obj, indent=2)
+
+
+def canonical_json(obj: object) -> str:
+    """Serialise ``obj`` deterministically for hashing: sorted keys, no insignificant whitespace."""
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)

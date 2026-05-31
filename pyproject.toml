@@ -15,6 +15,9 @@ dependencies = [
     # See the 3.x changelog: https://docs.litestar.dev/3-dev/release-notes/changelog.html
     "litestar @ git+https://github.com/litestar-org/litestar.git@main",
     "uvicorn>=0.30",
+    # Fetching external card sets and validating them against the vendored schema (api/set_loader.py).
+    "httpx>=0.28.1",
+    "jsonschema>=4.26",
 ]
 
 [project.urls]
@@ -34,6 +37,8 @@ dev = [
     "ruff>=0.15.13",
     "mypy>=2.0.0",
     "ty>=0.0.37",
+    # Type stubs (jsonschema ships no py.typed)
+    "types-jsonschema>=4.26",
 ]
 docs = [
     "sphinx>=7.4.4",
@@ -48,8 +53,6 @@ tests = [
     "pytest-randomly>=4.0.1",
     # Reporting
     "allure-pytest>=2.15.3",
-    # Litestar's TestClient is built on httpx
-    "httpx>=0.28.1",
 ]
 
 [tool.uv]

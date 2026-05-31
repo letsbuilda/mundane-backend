@@ -3,12 +3,11 @@
 Every state change in the game goes through here. Each branch runs its ``_require`` preconditions
 first (which raise :class:`IllegalAction` on a bad move, mutating nothing) and only then mutates.
 The function returns the state so it composes as a reducer:
-``final = reduce(apply_action, actions, initial)``.
+``final = reduce(partial(apply_action, cards=pool), actions, initial)``.
 """
 
 from .actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
-from .cards import CARD_LIBRARY
-from .state import PERMANENTS, PHASES, CardType, GameState, StackItem
+from .state import PERMANENTS, PHASES, Card, CardType, GameState, StackItem
 
 
 def _require(condition: bool, message: str) -> None:  # noqa: FBT001  (this is the rule-check idiom)
@@ -17,7 +16,7 @@ def _require(condition: bool, message: str) -> None:  # noqa: FBT001  (this is t
         raise IllegalAction(message)
 
 
-def apply_action(state: GameState, action: Action) -> GameState:
+def apply_action(state: GameState, action: Action, cards: dict[str, Card]) -> GameState:
     """Validate ``action`` against ``state``, then transition. Returns ``state``."""
     _require(state.winner is None, "the game is over")
 
@@ -32,7 +31,7 @@ def apply_action(state: GameState, action: Action) -> GameState:
             _require(not state.stack, "the stack must be empty for sorcery-speed cards")
             p = state.players[player]
             _require(0 <= idx < len(p.hand), "no such card in hand")
-            card = CARD_LIBRARY[p.hand[idx]]
+            card = cards[p.hand[idx]]
             _require(card.type != CardType.INSTANT, "use CastInstant for instants")
             _require(p.time >= card.cost, f"not enough Time ({p.time}/{card.cost})")
             card_id = p.hand.pop(idx)
@@ -43,7 +42,7 @@ def apply_action(state: GameState, action: Action) -> GameState:
             _require(player == state.priority_player, "you don't have priority")
             p = state.players[player]
             _require(0 <= idx < len(p.hand), "no such card in hand")
-            card = CARD_LIBRARY[p.hand[idx]]
+            card = cards[p.hand[idx]]
             _require(card.type == CardType.INSTANT, "that card isn't an instant")
             _require(p.time >= card.cost, f"not enough Time ({p.time}/{card.cost})")
             card_id = p.hand.pop(idx)
@@ -56,7 +55,7 @@ def apply_action(state: GameState, action: Action) -> GameState:
             if state.passes_in_a_row >= len(state.players):
                 state.passes_in_a_row = 0
                 if state.stack:
-                    _resolve_top(state)  # the stack empties one item at a time
+                    _resolve_top(state, cards)  # the stack empties one item at a time
                     state.priority_player = state.active_player
                 else:
                     _advance_phase(state)  # nothing pending -> move on
@@ -86,10 +85,10 @@ def _grant_priority_after_stack_change(state: GameState) -> None:
     state.passes_in_a_row = 0
 
 
-def _resolve_top(state: GameState) -> None:
+def _resolve_top(state: GameState, cards: dict[str, Card]) -> None:
     """Resolve the top stack item (LIFO): permanents hit the board, others fire then go to discard."""
     item = state.stack.pop()  # LIFO: last on, first off
-    card = CARD_LIBRARY[item.card_id]
+    card = cards[item.card_id]
     if card.type in PERMANENTS:
         state.players[item.controller].board.append(item.card_id)
     else:

@@ -79,6 +79,11 @@ mundane is split so the rules are testable without HTTP — please keep these bo
   nothing), then transitions. Add new rules there.
 - HTTP action bodies are a **tagged union** keyed by `type`; `api/schemas.py` only translates (no
   rules) and maps bad bodies to HTTP 422. Keep the tags in step with the engine's actions.
+- Card **content** is external data: games load JSON [card sets](https://github.com/letsbuilda/mundane-cards)
+  via `api/set_loader.py` (allowlist + fetch + schema-validate + snapshot). Card **behaviour** is the
+  engine's fixed `EFFECTS` vocabulary in `engine/cards.py` — a card names an effect, it can't define
+  one. The card-set schema is vendored at `api/card_schema/`; re-sync it when `mundane-cards` ships a
+  new `schema-v1`.
 
 `AGENTS.md` has the same boundaries spelled out in more detail.
 
