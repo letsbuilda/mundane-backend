@@ -68,6 +68,7 @@ The full module reference is generated from the source.
 .. toctree::
    :maxdepth: 1
 
+   api
    autoapi/index
 
 .. toctree::
