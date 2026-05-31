@@ -6,7 +6,7 @@ Humans should start with [`README.md`](README.md) and [`CONTRIBUTING.md`](CONTRI
 
 ## Project overview
 
-mundane-backend is *Magic: The Gathering without the magic* — a turn-based game **engine** plus a
+mundane-backend is *No dragons. No spells. Just Tuesday.* — a turn-based game **engine** plus a
 thin **HTTP API**. The engine is a referee: a whole game is a fold over a stream of *actions*, and
 one function, `apply_action(state, action)`, validates each action against the current state and
 then transitions it. The API is a thin shell that translates HTTP requests into engine actions; all

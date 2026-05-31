@@ -1,7 +1,7 @@
 Mundane Backend
 ===============
 
-*Magic: The Gathering without the, you know, magic.*
+*No dragons. No spells. Just Tuesday.*
 
 This is the reference implementation of `Mundane <https://github.com/letsbuilda/mundane>`_: a rules
 **engine** and a thin HTTP **API** over it. The engine is a referee, not a player — a whole game is a
