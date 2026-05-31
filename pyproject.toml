@@ -68,7 +68,8 @@ ignore = [
 "docs/*" = [
     "INP001", # (File `docs/conf.py` is part of an implicit namespace package. Add an `__init__.py`.) - Docs are not modules
 ]
-"src/mundane/engine/demo.py" = [
+"examples/*" = [
+    "INP001", # (File is part of an implicit namespace package. Add an `__init__.py`.) - Examples are not modules
     "T201",   # (`print` found) - The demo is a CLI; printing the scenario outcome is the point
 ]
 "tests/*" = [
@@ -84,9 +85,13 @@ convention = "numpy"
 
 [tool.mypy]
 pretty = true
+mypy_path = "examples"
 num_workers = 4
 native_parser = true # required by num_workers
 plugins = ["pydantic.mypy"]
+
+[tool.ty.environment]
+extra-paths = ["examples"]  # so the demo smoke test can `from demo import demo`
 
 [tool.coverage.run]
 branch = true
@@ -95,3 +100,4 @@ source_dirs = ["tests"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
+pythonpath = ["examples"]

@@ -9,9 +9,9 @@ from functools import reduce
 from typing import cast
 
 import pytest
+from demo import demo
 
 from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
-from mundane.engine.demo import demo
 from mundane.engine.rules import apply_action
 from mundane.engine.serialize import _jsonify, dumps, state_to_dict
 from mundane.engine.state import CardType, GameState, Player
