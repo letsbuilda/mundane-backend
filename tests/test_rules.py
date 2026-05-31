@@ -11,6 +11,7 @@ import pytest
 
 from mundane.engine.actions import Action, CastInstant, IllegalAction, PassPriority, PlayCard
 from mundane.engine.rules import apply_action
+from mundane.engine.serialize import dumps, state_to_dict
 from mundane.engine.state import GameState, Player
 
 
@@ -57,6 +58,17 @@ def test_state_is_json_serialisable_by_id() -> None:
     blob = json.dumps(dataclasses.asdict(state))
     assert "throw_a_house_party" in blob
     assert "<function" not in blob
+
+
+def test_state_to_dict_round_trips_through_json() -> None:
+    """A mid-game state serialises to a JSON string that parses back to the same dict."""
+    state = party_scenario()
+    apply_action(state, PlayCard(player=0, hand_index=0))  # party on the stack
+    blob = dumps(state_to_dict(state))
+    parsed = json.loads(blob)
+    assert parsed == state_to_dict(state)
+    assert parsed["stack"][0]["card_id"] == "throw_a_house_party"
+    assert parsed["players"][0]["hand"] == []
 
 
 def test_rejected_action_mutates_nothing() -> None:
