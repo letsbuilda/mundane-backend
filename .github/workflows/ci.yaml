@@ -145,7 +145,8 @@ jobs:
           path: allure-results
 
       - name: Install Allure commandline
-        run: npm install -g allure-commandline
+        run: | # zizmor: ignore[adhoc-packages]
+          npm install -g allure-commandline
 
       - name: Generate Allure report
         run: allure generate --clean --single-file
