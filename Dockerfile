@@ -8,7 +8,7 @@
 # build only needs uv, the lockfile, and the source — nothing from this stage
 # ships except the resulting /app/.venv.
 # ---------------------------------------------------------------------------
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:d21c2dd538d409d050027f67cd09f0b84882cf59072cf77720b15e21f3fe6af5 AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:e37a03b464436ee45750a0d027e4b802ffe579c96b78dcc7e6ef736ca8c658dd AS builder
 
 # Fail fast, build a self-contained venv, and never reach back out to PyPI for
 # anything not already pinned in uv.lock.
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # non-root user, and copy in only the prebuilt venv — no uv, no compilers, no
 # source build artifacts.
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim-trixie@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime
+FROM python:3.14-slim-trixie@sha256:656d12e70054d5fda18a045e2494c96701e9792dd1445f95b3d038df954f57e9 AS runtime
 
 # Predictable, unbuffered Python; put the venv first on PATH so `uvicorn` and
 # the interpreter resolve to the synced environment.
