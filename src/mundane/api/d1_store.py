@@ -33,19 +33,15 @@ class D1Statement(Protocol):
 
     def bind(self, *values: object) -> D1Statement:
         """Return the statement with ``values`` bound to its ``?`` placeholders."""
-        ...
 
     async def run(self) -> object:
         """Execute the statement; the result's ``meta.changes`` counts affected rows."""
-        ...
 
     async def first(self) -> object:
         """Return the first row (or ``None``)."""
-        ...
 
     async def all(self) -> object:
         """Return every row, under ``results``."""
-        ...
 
 
 class D1Database(Protocol):
@@ -53,7 +49,6 @@ class D1Database(Protocol):
 
     def prepare(self, query: str) -> D1Statement:
         """Prepare ``query``."""
-        ...
 
 
 def _py(value: object) -> Any:  # noqa: ANN401  (D1 rows are untyped JSON-shaped data)

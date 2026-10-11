@@ -27,6 +27,8 @@ extensions = [
 
 autoapi_type: str = "python"
 autoapi_dirs: list[str] = ["../src"]
+# The Workers entry point imports the Pyodide-only `js` module, so it cannot be imported to document.
+autoapi_ignore: list[str] = ["*/src/worker.py"]
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 

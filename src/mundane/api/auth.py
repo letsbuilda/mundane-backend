@@ -32,7 +32,6 @@ class Verifier(Protocol):
 
     def verify(self, token: str) -> str:
         """Return the subject of a valid ``token``."""
-        ...
 
 
 def default_fetch_jwks(url: str) -> bytes:
