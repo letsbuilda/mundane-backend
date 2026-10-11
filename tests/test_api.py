@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 import pytest
 from litestar.testing import TestClient
 
-from mundane.api.app import GameStore, create_app
+from mundane.api.app import create_app
 from mundane.api.schemas import parse_action
 from mundane.api.set_loader import DEFAULT_SET_URLS, Fetcher, SetFetchError
+from mundane.api.store import MemoryGameStore
 from mundane.engine.actions import ACTION_TYPES, CastInstant, PassPriority, PlayCard
 from mundane.engine.serialize import action_to_dict
 
@@ -73,10 +74,26 @@ ROUND_TRIP_ACTIONS: list[Action] = [
 ]
 
 
+class FakeVerifier:
+    """Accept any token and treat it as the player's id, so tests can sign in as anyone without Auth0."""
+
+    def verify(self, token: str) -> str:
+        """Return the token itself as the subject."""
+        return token
+
+
+def _signed_in(store: MemoryGameStore, player: str = "auth0|steve") -> TestClient[Litestar]:
+    """Return a TestClient for an app over ``store`` that sends ``player``'s bearer token on every request."""
+    app = create_app(store=store, verifier=FakeVerifier())
+    client = TestClient(app=app)
+    client.headers["Authorization"] = f"Bearer {player}"
+    return client
+
+
 @pytest.fixture
 def client() -> Iterator[TestClient[Litestar]]:
-    """Yield a TestClient whose store resolves card sets from the local core fixture (offline)."""
-    with TestClient(app=create_app(store=GameStore(fetch=_fake_fetch))) as test_client:
+    """Yield a signed-in TestClient whose store resolves card sets from the local core fixture (offline)."""
+    with _signed_in(MemoryGameStore(fetch=_fake_fetch)) as test_client:
         yield test_client
 
 
@@ -110,6 +127,40 @@ def test_illegal_move_returns_422_and_leaves_state_untouched(client: TestClient[
 def test_unknown_game_returns_404(client: TestClient[Litestar]) -> None:
     """Reading a game that was never created returns 404."""
     assert client.get("/games/does-not-exist").status_code == 404
+
+
+def test_requests_without_a_token_return_401() -> None:
+    """Every game route needs a signed-in player; no bearer token is a 401 and creates nothing."""
+    store = MemoryGameStore(fetch=_fake_fetch)
+    with TestClient(app=create_app(store=store, verifier=FakeVerifier())) as anonymous:
+        assert anonymous.post("/games").status_code == 401
+        assert anonymous.get("/games/anything").status_code == 401
+    assert store.games == {}
+
+
+def test_other_players_games_are_not_found() -> None:
+    """A game is visible only to the player who created it; everyone else gets the same 404 as a bad id."""
+    store = MemoryGameStore(fetch=_fake_fetch)
+    with _signed_in(store, "auth0|steve") as steve, _signed_in(store, "auth0|alex") as alex:
+        game_id = steve.post("/games").json()["game_id"]
+        assert alex.get(f"/games/{game_id}").status_code == 404
+        assert alex.post(f"/games/{game_id}/actions", json=COUNTERED_PARTY_SEQUENCE[0]).status_code == 404
+        assert alex.get(f"/games/{game_id}/export").status_code == 404
+        assert steve.get(f"/games/{game_id}").status_code == 200
+
+
+def test_cors_allows_the_site() -> None:
+    """The site's origin may call the API from the browser with a bearer token."""
+    with _signed_in(MemoryGameStore(fetch=_fake_fetch)) as client:
+        response = client.options(
+            "/games",
+            headers={
+                "Origin": "https://letsbuilda.dev",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,content-type",
+            },
+        )
+    assert response.headers["access-control-allow-origin"] == "https://letsbuilda.dev"
 
 
 @pytest.mark.parametrize(
@@ -159,21 +210,21 @@ def test_set_urls_must_be_a_list_of_strings(client: TestClient[Litestar]) -> Non
 def test_schema_invalid_set_returns_422() -> None:
     """A fetched set that fails schema validation (here: no ``cards``) is rejected with 422."""
     body = json.dumps({"set_id": "extra", "name": "Extra", "version": "1.0.0"}).encode()
-    with TestClient(app=create_app(store=GameStore(fetch=_serve(body)))) as client:
+    with _signed_in(MemoryGameStore(fetch=_serve(body))) as client:
         assert client.post("/games", json={"set_urls": [_ALLOWLISTED_URL]}).status_code == 422
 
 
 def test_unknown_effect_returns_422() -> None:
     """A schema-valid set whose card names an effect outside the engine vocabulary is rejected (422)."""
     body = _set_bytes([{"id": "x", "name": "X", "cost": 1, "type": "task", "effect": "teleport", "text": "t"}])
-    with TestClient(app=create_app(store=GameStore(fetch=_serve(body)))) as client:
+    with _signed_in(MemoryGameStore(fetch=_serve(body))) as client:
         assert client.post("/games", json={"set_urls": [_ALLOWLISTED_URL]}).status_code == 422
 
 
 def test_bad_effect_params_returns_422() -> None:
     """A card whose params are wrong for its effect (damage_composure without amount) is rejected (422)."""
     body = _set_bytes([{"id": "x", "name": "X", "cost": 3, "type": "task", "effect": "damage_composure", "text": "t"}])
-    with TestClient(app=create_app(store=GameStore(fetch=_serve(body)))) as client:
+    with _signed_in(MemoryGameStore(fetch=_serve(body))) as client:
         assert client.post("/games", json={"set_urls": [_ALLOWLISTED_URL]}).status_code == 422
 
 
@@ -181,20 +232,20 @@ def test_duplicate_ids_returns_422() -> None:
     """A set that defines the same composed id twice is rejected with 422."""
     card: dict[str, object] = {"id": "dup", "name": "Dup", "cost": 1, "type": "task", "effect": "none", "text": "t"}
     body = _set_bytes([card, {**card, "name": "Dup 2"}])
-    with TestClient(app=create_app(store=GameStore(fetch=_serve(body)))) as client:
+    with _signed_in(MemoryGameStore(fetch=_serve(body))) as client:
         assert client.post("/games", json={"set_urls": [_ALLOWLISTED_URL]}).status_code == 422
 
 
 def test_fetch_failure_returns_502() -> None:
     """An upstream fetch failure (network/timeout/oversize) maps to 502, not 500."""
-    with TestClient(app=create_app(store=GameStore(fetch=_boom_fetch))) as client:
+    with _signed_in(MemoryGameStore(fetch=_boom_fetch)) as client:
         assert client.post("/games", json={"set_urls": [_ALLOWLISTED_URL]}).status_code == 502
 
 
 def test_loader_failure_leaves_store_untouched() -> None:
     """When loading fails, nothing is stored — the referee discipline holds at the API layer too."""
-    store = GameStore(fetch=_fake_fetch)
-    with TestClient(app=create_app(store=store)) as client:
+    store = MemoryGameStore(fetch=_fake_fetch)
+    with _signed_in(store) as client:
         assert client.post("/games", json={"set_urls": ["https://evil.example/x"]}).status_code == 422
     assert store.games == {}
 

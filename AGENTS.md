@@ -91,10 +91,15 @@ src/mundane/
     serialize.py   # state/action -> JSON-ready data; canonical_json for hashing
     game.py        # Game: state + card pool + action log + snapshot; submit() / export()
   api/
-    app.py         # Litestar app, in-memory GameStore, exception handlers (422 / 502)
+    app.py         # Litestar app, settings, auth + store dependencies, exception handlers (422 / 409 / 502)
+    auth.py        # Auth0 access-token verification -> the caller's `sub`
+    store.py       # GameStore interface, in-memory store, start/replay helpers
+    d1_store.py    # Cloudflare D1 store (snapshot row + one row per action)
     schemas.py     # action JSON (tagged union) -> action dataclasses
     set_loader.py  # allowlist + hardened fetch + schema-validate + snapshot/hash
     card_schema/   # vendored, pinned copy of card-set.schema.json
+src/worker.py      # Cloudflare Workers entry point (D1-backed app)
+migrations/        # D1 schema (wrangler d1 migrations)
 examples/demo.py   # runnable scenario
 tests/             # pytest suite
 docs/              # Sphinx docs
@@ -114,8 +119,11 @@ Invariants to preserve when changing code:
   raises `IllegalAction` (which the app maps to **HTTP 422**) for unknown or malformed bodies. Keep
   the tags in lockstep with the engine; the `action_to_dict` -> `parse_action` round-trip is the
   identity (there's a test for it).
-- The game store is an in-memory dict behind a small `GameStore` interface (`create`/`get`/`save`);
-  games are volatile. Prefer extending this interface over reaching around it.
+- Games live behind the small async `GameStore` ABC (`create`/`get`/`save`): `MemoryGameStore` for
+  tests and local uvicorn, `D1GameStore` in the Worker. D1 stores the card snapshot and the action log,
+  never live state; loading replays the log. Prefer extending this interface over reaching around it.
+- **Every game route is per player.** The `player` dependency is the verified Auth0 token's `sub`;
+  stores return 404 for games the caller doesn't own (same as a missing id).
 - **Cards are external data; effects are engine code.** `cards.py` holds the fixed effect vocabulary
   (`EFFECTS`) and the loader (`build_card` / `build_pool`); a JSON card names an effect + `params` and
   cannot add behaviour. The engine rejects unknown effect names and bad params at load time; the
@@ -137,6 +145,11 @@ Invariants to preserve when changing code:
 - Keep changes focused; ensure `nox -s lints` and `nox -s tests` pass before pushing.
 
 ## Gotchas
+
+- **The Worker is Pyodide, not CPython.** Nothing may draw random numbers at import time in
+  `src/worker.py` (imports go inside `fetch`), there are no threads (handlers stay `async` or
+  `sync_to_thread=False`), and Worker packages resolve via `pylock.toml` with `UV_NO_CONFIG=1` (see
+  the README's Hosting section).
 
 - **Litestar 3 is pre-release**, pinned to a git `main` commit in `uv.lock`. APIs can shift between
   versions — use current Litestar 3 patterns and don't reintroduce removed/deprecated APIs.

@@ -7,3 +7,8 @@ __pycache__
 
 # Docs
 docs/build
+
+# Cloudflare Workers (pywrangler sync / wrangler dev)
+.venv-workers
+python_modules
+.wrangler

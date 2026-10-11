@@ -18,6 +18,10 @@ dependencies = [
     # Fetching external card sets and validating them against the vendored schema (api/set_loader.py).
     "httpx>=0.28.1",
     "jsonschema>=4.26",
+    # Verifying players' Auth0 access tokens (api/auth.py).
+    "pyjwt[crypto]>=2.10.1",
+    # pyjwt[crypto] alone allows cryptography 3.x, which has no Python 3.14 wheels (CI resolves lowest).
+    "cryptography>=47.0.0",
 ]
 
 [project.urls]
@@ -39,12 +43,18 @@ dev = [
     "ty>=0.0.63",
     # Type stubs (jsonschema ships no py.typed)
     "types-jsonschema>=4.26",
+    # Types for the `workers` runtime module (src/worker.py)
+    "workers-runtime-sdk>=1.9.2",
 ]
 docs = [
     "sphinx>=7.4.4",
     "furo>=2024.5.6",
     "sphinx-autoapi>=3.8.0",
     "releases>=2.1.1",
+]
+workers = [
+    # `pywrangler`: run and deploy the Cloudflare Worker (see README, Hosting)
+    "workers-py>=1.17.6",
 ]
 tests = [
      "coverage>=7.15.2",
@@ -111,3 +121,7 @@ source_dirs = ["tests"]
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 pythonpath = ["examples"]
+
+[tool.pywrangler]
+# Litestar 3 is a git dependency with no published wheel; let pywrangler build it (pure Python).
+allow-build = true

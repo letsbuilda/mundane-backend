@@ -9,6 +9,14 @@ Serve the API locally:
 
 Interactive OpenAPI docs are served at ``http://localhost:8000/schema``.
 
+Every game route needs a signed-in player: send an Auth0 access token for the Mundane API as
+``Authorization: Bearer <token>``. The site gets one when a player logs in; for ``curl``, copy a test
+token from the API's **Test** tab in the Auth0 dashboard. A game belongs to the player who created it;
+anyone else gets 404, and requests without a valid token get 401.
+
+Deployed, the same app runs as a Cloudflare Worker at ``https://mundane.letsbuilda.dev`` with games
+stored in D1; see the README.
+
 Endpoints
 ---------
 
@@ -26,7 +34,7 @@ Endpoints
      - read current state
    * - POST
      - ``/games/{id}/actions``
-     - submit a move (422 if illegal)
+     - submit a move (422 if illegal, 409 if another move landed first)
    * - GET
      - ``/games/{id}/export``
      - download the game log + final state + card snapshot
@@ -36,24 +44,26 @@ Exercise it
 
 .. code-block:: bash
 
+   AUTH="Authorization: Bearer $TOKEN"
+
    # create a game and capture its id
-   GID=$(curl -s -X POST localhost:8000/games | python -c 'import sys,json; print(json.load(sys.stdin)["game_id"])')
+   GID=$(curl -s -X POST localhost:8000/games -H "$AUTH" | python -c 'import sys,json; print(json.load(sys.stdin)["game_id"])')
 
    # read the current state
-   curl -s localhost:8000/games/$GID
+   curl -s localhost:8000/games/$GID -H "$AUTH"
 
    # submit a move (the tagged-union body carries a "type" discriminator)
-   curl -s -X POST localhost:8000/games/$GID/actions \
+   curl -s -X POST localhost:8000/games/$GID/actions -H "$AUTH" \
      -H 'content-type: application/json' \
      -d '{"type": "play_card", "player": 0, "hand_index": 0}'
 
    # an illegal move is rejected with 422; the stored game is unchanged
-   curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8000/games/$GID/actions \
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8000/games/$GID/actions -H "$AUTH" \
      -H 'content-type: application/json' \
      -d '{"type": "cast_instant", "player": 1, "hand_index": 9}'
 
    # download the game log (saves to mundane-game-$GID.json)
-   curl -s -OJ localhost:8000/games/$GID/export
+   curl -s -OJ localhost:8000/games/$GID/export -H "$AUTH"
 
 The action body is a tagged union — every action carries a ``type``:
 

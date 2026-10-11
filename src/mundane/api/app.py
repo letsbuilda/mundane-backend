@@ -5,76 +5,47 @@ engine actions and calls ``Game.submit``, then maps the engine's :class:`Illegal
 All game legality lives in the engine. Loading a game's cards (allowlist, fetch, schema-validate,
 snapshot) lives in :mod:`mundane.api.set_loader`; the engine receives only the resolved pool.
 
-The game store is an in-memory ``dict``, supplied via dependency injection. It is **volatile** (lost
-on restart); see the README. Keeping it behind the small :class:`GameStore` interface
-(create / get / save) makes swapping it for Redis or SQLite a localised change.
+Every game route needs a signed-in player: the caller's Auth0 access token (see :mod:`mundane.api.auth`)
+names the ``player``, games belong to the player who created them, and anyone else gets 404. Where games
+live is the injected :class:`~mundane.api.store.GameStore`: in memory by default (volatile), or
+Cloudflare D1 when running as a Worker (``src/worker.py``).
 """
 
 from typing import TYPE_CHECKING, Any, cast
-from uuid import uuid4
 
 from litestar import Litestar, MediaType, Request, Response, get, post
+from litestar.config.cors import CORSConfig
 from litestar.di import Provide
-from litestar.exceptions import NotFoundException
-from litestar.status_codes import HTTP_422_UNPROCESSABLE_ENTITY, HTTP_502_BAD_GATEWAY
+from litestar.status_codes import HTTP_409_CONFLICT, HTTP_422_UNPROCESSABLE_ENTITY, HTTP_502_BAD_GATEWAY
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mundane.engine.actions import IllegalAction
 from mundane.engine.cards import DuplicateCardError, InvalidEffectParamsError, UnknownEffectError
-from mundane.engine.game import Game, new_game
 from mundane.engine.serialize import state_to_dict
 
+from .auth import Auth0Verifier, Verifier, bearer_token
 from .schemas import parse_action
-from .set_loader import (
-    DEFAULT_SET_URLS,
-    Fetcher,
-    SetFetchError,
-    SetSchemaError,
-    SetURLNotAllowedError,
-    default_fetch,
-    load_sets,
-)
+from .set_loader import SetFetchError, SetSchemaError, SetURLNotAllowedError
+from .store import GameConflictError, GameStore, MemoryGameStore
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-class GameStore:
-    """In-memory game store. Volatile: its contents are lost when the process restarts.
+class Settings(BaseSettings):
+    """Deployment settings. The defaults are production's; override with ``MUNDANE_*`` environment variables.
 
-    Deliberately an opaque service (not a dataclass), so the framework treats it as an injected
-    dependency rather than request data to introspect. Swapping in Redis or SQLite later means
-    reimplementing just create / get / save behind this same interface. ``fetch`` is injectable so
-    tests can resolve set URLs from a local fixture instead of the network.
+    None of these are secrets: the Auth0 domain and audience are public identifiers, like the site's.
     """
 
-    def __init__(self, *, fetch: Fetcher = default_fetch) -> None:
-        """Start with no games, using ``fetch`` to retrieve card sets."""
-        self.games: dict[str, Game] = {}
-        self._fetch = fetch
+    model_config = SettingsConfigDict(env_prefix="MUNDANE_")
 
-    def create(self, set_urls: Sequence[str] | None = None) -> tuple[str, Game]:
-        """Resolve ``set_urls`` (default: the core set), then create and store a new game.
-
-        Loading happens **before** the store is touched, so any loader error leaves it unchanged.
-        """
-        pool = load_sets(set_urls or DEFAULT_SET_URLS, fetch=self._fetch)
-        game_id = uuid4().hex
-        game = new_game(pool.cards)
-        game.card_snapshot = pool.snapshot
-        self.games[game_id] = game
-        return game_id, game
-
-    def get(self, game_id: str) -> Game:
-        """Return the stored game, or raise ``NotFoundException`` (-> 404) if there is none."""
-        try:
-            return self.games[game_id]
-        except KeyError as exc:
-            msg = f"no game with id {game_id!r}"
-            raise NotFoundException(detail=msg) from exc
-
-    def save(self, game_id: str, game: Game) -> None:
-        """Persist the game. A no-op for the in-memory store (games already mutate in place)."""
-        self.games[game_id] = game
+    auth0_domain: str = "id.letsbuilda.dev"
+    """The Auth0 tenant (custom domain) that issues players' access tokens."""
+    auth0_audience: str = "https://mundane.letsbuilda.dev"
+    """The Auth0 API identifier the site requests tokens for."""
+    cors_origins: list[str] = ["https://letsbuilda.dev", "http://localhost:4321"]
+    """Browser origins allowed to call the API: the site, and its local dev server."""
 
 
 def _unprocessable_handler(_request: Request[Any, Any, Any], exc: Exception) -> Response[dict[str, str]]:
@@ -82,6 +53,15 @@ def _unprocessable_handler(_request: Request[Any, Any, Any], exc: Exception) -> 
     return Response(
         content={"detail": str(exc)},
         status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+        media_type=MediaType.JSON,
+    )
+
+
+def _conflict_handler(_request: Request[Any, Any, Any], exc: Exception) -> Response[dict[str, str]]:
+    """Map a lost race between two moves in the same game onto HTTP 409; the later move was not recorded."""
+    return Response(
+        content={"detail": str(exc)},
+        status_code=HTTP_409_CONFLICT,
         media_type=MediaType.JSON,
     )
 
@@ -106,37 +86,37 @@ def _parse_set_urls(data: dict[str, object] | None) -> Sequence[str] | None:
     return cast("list[str]", set_urls)
 
 
-@post("/games", sync_to_thread=False)
-def create_game(store: GameStore, data: dict[str, object] | None = None) -> dict[str, object]:
+@post("/games")
+async def create_game(store: GameStore, player: str, data: dict[str, object] | None = None) -> dict[str, object]:
     """Create a new game from ``set_urls`` (default: the core set); return its id and initial state."""
-    game_id, game = store.create(_parse_set_urls(data))
+    game_id, game = await store.create(player, _parse_set_urls(data))
     return {"game_id": game_id, "state": state_to_dict(game.state)}
 
 
-@get("/games/{game_id:str}", sync_to_thread=False)
-def read_game(game_id: str, store: GameStore) -> dict[str, object]:
+@get("/games/{game_id:str}")
+async def read_game(game_id: str, store: GameStore, player: str) -> dict[str, object]:
     """Return the current state of a game."""
-    return state_to_dict(store.get(game_id).state)
+    return state_to_dict((await store.get(game_id, player)).state)
 
 
-@post("/games/{game_id:str}/actions", sync_to_thread=False)
-def submit_action(game_id: str, data: dict[str, object], store: GameStore) -> dict[str, object]:
+@post("/games/{game_id:str}/actions")
+async def submit_action(game_id: str, data: dict[str, object], store: GameStore, player: str) -> dict[str, object]:
     """Submit a move. An illegal move raises ``IllegalAction`` (-> 422) and changes nothing."""
-    game = store.get(game_id)
+    game = await store.get(game_id, player)
     state = game.submit(parse_action(data))
-    store.save(game_id, game)
+    await store.save(game_id, game)
     return state_to_dict(state)
 
 
-@get("/games/{game_id:str}/export", sync_to_thread=False)
-def export_game(game_id: str, store: GameStore) -> Response[dict[str, object]]:
+@get("/games/{game_id:str}/export")
+async def export_game(game_id: str, store: GameStore, player: str) -> Response[dict[str, object]]:
     """Return the game's log, final state, and card snapshot as a downloadable JSON attachment.
 
     The snapshot (resolved cards + content hash) makes the download self-contained: it replays
     without reaching the cards repo. The Content-Disposition attachment header is what the
     "Download game log" button on the game-over screen points at.
     """
-    export = store.get(game_id).export()
+    export = (await store.get(game_id, player)).export()
     filename = f"mundane-game-{game_id}.json"
     return Response(
         content=export,
@@ -145,18 +125,41 @@ def export_game(game_id: str, store: GameStore) -> Response[dict[str, object]]:
     )
 
 
-def create_app(store: GameStore | None = None) -> Litestar:
-    """Build the Litestar app. Pass a ``store`` to share/inspect it (tests do); else a fresh one."""
-    shared_store = store if store is not None else GameStore()
+def create_app(
+    store: GameStore | None = None,
+    verifier: Verifier | None = None,
+    settings: Settings | None = None,
+) -> Litestar:
+    """Build the Litestar app. Tests pass their own ``store`` and ``verifier``; otherwise from ``settings``."""
+    settings = settings if settings is not None else Settings()
+    shared_store = store if store is not None else MemoryGameStore()
+    shared_verifier = (
+        verifier
+        if verifier is not None
+        else Auth0Verifier(domain=settings.auth0_domain, audience=settings.auth0_audience)
+    )
 
     def provide_store() -> GameStore:
-        """Provide the single in-memory store shared across every request."""
+        """Provide the single store shared across every request."""
         return shared_store
+
+    def provide_player(request: Request[Any, Any, Any]) -> str:
+        """Provide the signed-in player's id (the token's ``sub``); no valid token is a 401."""
+        return shared_verifier.verify(bearer_token(request))
 
     return Litestar(
         route_handlers=[create_game, read_game, submit_action, export_game],
-        dependencies={"store": Provide(provide_store, sync_to_thread=False)},
-        # Bad input -> 422 (the store is left untouched); an upstream fetch failure -> 502.
+        dependencies={
+            "store": Provide(provide_store, sync_to_thread=False),
+            "player": Provide(provide_player, sync_to_thread=False),
+        },
+        cors_config=CORSConfig(
+            allow_origins=settings.cors_origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["Authorization", "Content-Type"],
+            expose_headers=["Content-Disposition"],
+        ),
+        # Bad input -> 422 (the store is left untouched); a lost race -> 409; an upstream fetch failure -> 502.
         exception_handlers={
             IllegalAction: _unprocessable_handler,
             SetURLNotAllowedError: _unprocessable_handler,
@@ -164,6 +167,7 @@ def create_app(store: GameStore | None = None) -> Litestar:
             UnknownEffectError: _unprocessable_handler,
             InvalidEffectParamsError: _unprocessable_handler,
             DuplicateCardError: _unprocessable_handler,
+            GameConflictError: _conflict_handler,
             SetFetchError: _bad_gateway_handler,
         },
     )

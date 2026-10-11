@@ -24,3 +24,30 @@ composed ids), and **snapshotted** with a sha256 hash into the game so `GET /gam
 replays self-contained. Bad input is rejected before anything is stored: non-allowlisted URL /
 schema-invalid set / unknown effect / bad params / duplicate id → **422**; fetch failure / timeout /
 oversize → **502**.
+
+## Hosting
+
+The API runs as a [Python Worker](https://developers.cloudflare.com/workers/languages/python/) on
+Cloudflare's free plan at `https://mundane.letsbuilda.dev`, with games stored in
+[D1](https://developers.cloudflare.com/d1/) (`src/worker.py`, `wrangler.jsonc`, `migrations/`). Players
+sign in on [letsbuilda.dev](https://letsbuilda.dev) with Auth0, and every request carries their access
+token; a game belongs to the player who created it.
+
+Run the Worker locally (games go to a local D1 file under `.wrangler/`):
+
+```bash
+npx wrangler d1 migrations apply mundane --local
+UV_NO_CONFIG=1 uv run --group workers --frozen pywrangler dev
+```
+
+`UV_NO_CONFIG=1` matters: `exclude-newer` in `pyproject.toml` hides Pyodide's wheels (they have no
+upload dates), so the Worker's packages can't resolve with it. `pylock.toml` is the Worker's own lock
+(Pyodide builds of the native packages, plus a pinned Litestar commit); refresh it with
+`UV_NO_CONFIG=1 uv run --group workers --frozen pywrangler sync --upgrade`.
+
+Deploys go through [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) on pushes to
+`main`, with the build variable `UV_NO_CONFIG=1` and this deploy command:
+
+```bash
+npx wrangler d1 migrations apply mundane --remote && uv run --group workers --frozen pywrangler deploy
+```

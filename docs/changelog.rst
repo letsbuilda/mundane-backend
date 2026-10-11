@@ -1,6 +1,9 @@
 Changelog
 =========
 
+* :feature:`0` Hosted as a Cloudflare Worker with games persisted in D1 (:mod:`mundane.api.d1_store`).
+  Every game route now needs an Auth0 access token (:mod:`mundane.api.auth`), and games belong to the
+  player who created them. A move that loses a race with another move returns 409.
 * :feature:`0` The Mundane rules engine — :func:`mundane.engine.rules.apply_action` as the single
   state-transition function, an event-sourced :class:`mundane.engine.game.Game` log, and a fully
   JSON-serialisable :class:`mundane.engine.state.GameState` that stores cards by id.

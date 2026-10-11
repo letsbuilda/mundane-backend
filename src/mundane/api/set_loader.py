@@ -13,7 +13,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from importlib import resources
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlsplit
 
 import httpx
@@ -136,3 +136,18 @@ def load_sets(
             snapshot_cards.append({**card_dict, "id": card.id})
     content_hash = "sha256:" + sha256(canonical_json(snapshot_cards).encode()).hexdigest()
     return ResolvedPool(cards=pool, snapshot={"cards": snapshot_cards, "content_hash": content_hash})
+
+
+def pool_from_snapshot(snapshot: dict[str, object]) -> dict[str, Card]:
+    """Rebuild a game's pool from its stored snapshot, offline: the inverse of :func:`load_sets`.
+
+    Snapshot cards carry composed ids (``set_id:id``); set and card ids never contain ``:`` (the schema
+    restricts both to ``[a-z0-9_]``), so splitting on the first one recovers both halves. This is what
+    lets a persisted game reload without re-fetching its sets, even if the cards repo has moved on.
+    """
+    pool: dict[str, Card] = {}
+    for card_dict in cast("list[dict[str, object]]", snapshot["cards"]):
+        set_id, _, card_id = cast("str", card_dict["id"]).partition(":")
+        card = build_card(set_id, {**card_dict, "id": card_id})
+        pool[card.id] = card
+    return pool

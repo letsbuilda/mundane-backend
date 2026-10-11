@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "mundane",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["python_workers"],
+  // The vendored card-set schema is read at runtime; Python Workers only upload .py files by default.
+  "rules": [{ "type": "Data", "globs": ["**/*.json"], "fallthrough": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mundane",
+      // Fill in from `npx wrangler d1 create mundane`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "routes": [{ "pattern": "mundane.letsbuilda.dev", "custom_domain": true }],
+  "observability": { "enabled": true },
+  "preview_urls": true
+}
