@@ -8,7 +8,7 @@
 # build only needs uv, the lockfile, and the source — nothing from this stage
 # ships except the resulting /app/.venv.
 # ---------------------------------------------------------------------------
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:d21c2dd538d409d050027f67cd09f0b84882cf59072cf77720b15e21f3fe6af5 AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:8f4ab6a0f2cc074290ba6a136eb016350b2b6b93a2108e07b72724901ad1914f AS builder
 
 # Fail fast, build a self-contained venv, and never reach back out to PyPI for
 # anything not already pinned in uv.lock.
